@@ -578,43 +578,25 @@ GptLayerInputs GptModel::forwardPreLayers(const GptModelInputs& inputs) {
     }
     device_->checkError();
 
-    // Performance timing for data preparation operations
-    auto       start_time   = std::chrono::high_resolution_clock::now();
     const auto combo_tokens = device_->clone({*inputs.combo_tokens, AllocationType::DEVICE, {"combo_tokens"}});
-    auto       end_time     = std::chrono::high_resolution_clock::now();
-    auto       duration     = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    RTP_LLM_LOG_INFO("GptModel combo_tokens clone time: %ld microseconds", duration.count());
 
     const auto& embedding_table = weights_.embedding->kernel;
 
-    start_time = std::chrono::high_resolution_clock::now();
     const BufferPtr combo_position_ids =
         inputs.combo_position_ids ? device_->clone({*inputs.combo_position_ids}) : nullptr;
-    end_time = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    RTP_LLM_LOG_INFO("GptModel combo_position_ids clone time: %ld microseconds", duration.count());
 
-    start_time = std::chrono::high_resolution_clock::now();
     const BufferPtr combo_tokens_type_ids =
         inputs.combo_tokens_type_ids ? device_->clone({*inputs.combo_tokens_type_ids}) : nullptr;
-    end_time = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    RTP_LLM_LOG_INFO("GptModel combo_tokens_type_ids clone time: %ld microseconds", duration.count());
 
-    start_time = std::chrono::high_resolution_clock::now();
     const BufferPtr text_tokens_mask =
         inputs.multimodal_features ?
             device_->clone({*inputs.text_tokens_mask, AllocationType::DEVICE, {"text_tokens_mask"}}) :
             nullptr;
-    end_time = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    RTP_LLM_LOG_INFO("GptModel text_tokens_mask clone time: %ld microseconds", duration.count());
 
     const BufferPtr mm_feature_locs       = inputs.mm_features_locs ? inputs.mm_features_locs : nullptr;
     const BufferPtr input_embeddings_locs = inputs.input_embeddings_locs ? inputs.input_embeddings_locs : nullptr;
 
     // word embedding lookup
-    start_time  = std::chrono::high_resolution_clock::now();
     auto hidden = device_->embeddingLookup(
         {*combo_tokens,
          *embedding_table,
@@ -624,9 +606,6 @@ GptLayerInputs GptModel::forwardPreLayers(const GptModelInputs& inputs) {
          weights_.position_encoding ? (OptionalConstBufferRef)*weights_.position_encoding->kernel : nullopt,
          combo_tokens_type_ids ? (OptionalConstBufferRef)*combo_tokens_type_ids : nullopt,
          weights_.token_type_embedding ? (OptionalConstBufferRef)*weights_.token_type_embedding->kernel : nullopt});
-    end_time = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    RTP_LLM_LOG_INFO("GptModel embeddingLookup time: %ld microseconds", duration.count());
     if (residual_scale_fp32_ && residual_scale_->type() != hidden->type()) {
         residual_scale_ = device_->convert({residual_scale_fp32_, hidden->type()});
     }
