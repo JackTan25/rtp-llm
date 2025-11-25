@@ -103,7 +103,6 @@ BufferPtr GptModel::tpSyncEmbeddingOrLogits(const BufferPtr& buffer) {
 rtp_llm::AttentionCommonInputs GptModel::prepareAttentionInputs(const GptModelInputs& inputs,
                                                                 rtp_llm::DataType     attn_dtype,
                                                                 rtp_llm::BufferPtr    combo_position_ids) {
-    DevicePerfWrapper     wrapper(device_, "cpp model prepareAttentionInputs");
     AttentionCommonInputs attention_inputs({
         device_->clone({*inputs.input_lengths}),
         device_->clone({*inputs.sequence_lengths}),
@@ -577,14 +576,12 @@ GptLayerInputs GptModel::forwardPreLayers(const GptModelInputs& inputs) {
         printBufferData(*pad_combo_tokens, {"pad_combo_tokens"});
     }
     device_->checkError();
-
     const auto combo_tokens = device_->clone({*inputs.combo_tokens, AllocationType::DEVICE, {"combo_tokens"}});
 
     const auto& embedding_table = weights_.embedding->kernel;
 
     const BufferPtr combo_position_ids =
         inputs.combo_position_ids ? device_->clone({*inputs.combo_position_ids}) : nullptr;
-
     const BufferPtr combo_tokens_type_ids =
         inputs.combo_tokens_type_ids ? device_->clone({*inputs.combo_tokens_type_ids}) : nullptr;
 
@@ -592,7 +589,6 @@ GptLayerInputs GptModel::forwardPreLayers(const GptModelInputs& inputs) {
         inputs.multimodal_features ?
             device_->clone({*inputs.text_tokens_mask, AllocationType::DEVICE, {"text_tokens_mask"}}) :
             nullptr;
-
     const BufferPtr mm_feature_locs       = inputs.mm_features_locs ? inputs.mm_features_locs : nullptr;
     const BufferPtr input_embeddings_locs = inputs.input_embeddings_locs ? inputs.input_embeddings_locs : nullptr;
 
